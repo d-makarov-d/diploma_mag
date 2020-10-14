@@ -1,6 +1,7 @@
 function sets = analiseStat()
     DATA_LEN = 24000; % preset length of a sample signal
     FS = 62.5;
+    ALL_FLIPS_SAMPLES = 8;
     
     % load classified data, which was made by another script
     load('patterns\classified.mat');
@@ -15,21 +16,77 @@ function sets = analiseStat()
     
     for i = 1:length(intervals)
         type = intervals(i).type;
-        s = struct('data', intervals(i).data, ...
+        stdS = struct('data', intervals(i).data, ...
                 'time', intervals(i).time - intervals(i).interval(1), ...
                 'interval', intervals(i).interval);
             
-        sets{type}(end+1) = s;
+        sets{type}(end+1) = stdS;
     end
     
     % normalize all data
     sets = mNormalize(sets);
     
-    avgByCorr({sets{1}.data}); 
+    findSetAverage({sets{2}.data});
+end
+
+function findSetAverage(samples)
+    % I step of correlating sets
+    % because sets can be flipped, we take ALL_FLIPS_SAMPLES random samples, 
+    % and calculate all 2^ALL_FLIPS_SAMPLES available combinations of flips
+    figure('Name', 'Input Data');
+    drawSet(data);
+    
+    % to be in array bounds
+    samples = samples(1:min([length(samples), ALL_FLIPS_SAMPLES]));
+    allFlips = mkAllFlips(samples);
+    
+    % calculate averege and std for all sample combinations
+    % and select result with minimum std area
+    bestAvg = [];
+    bestStd = [];
+    bestI = 0;
+    stdS = Inf;
+    for i = 1:length(allFlips)
+        [avg, dev] = avgByCorr(allFlips{i}); 
+        stdSNew = trapz(dev);
+        if (stdSNew < stdS) 
+            stdS = stdSNew;
+            bestAvg = avg;
+            bestStd = dev;
+            bestI = i;
+        end
+    end
+    data(1:length(samples)) = allFlips{bestI};
+    
+    if (length(data) <= ALL_FLIPS_SAMPLES)
+        % if there is no more data, just return best averege
+    else
+        % else stage 2
+        % flip all the res of data according to correlation with
+        % bestAvg, and find the resulting average
+        
+        for i = (ALL_FLIPS_SAMPLES+1):length(data)
+            straight = data{i};
+            flipped = flip(data{i});
+            crrS = max(xcorr(bestAvg, straight));
+            crrF = max(xcorr(bestAvg, flipped));
+            
+            if (crrF > crrS)
+                data{i} = flipped;
+            end
+        end
+    end
+    figure('Name', 'Flipped Data');
+    drawSet(data);
+    
+    % calculate averege, using properly flipped set
+    [avg, dev, shifted] = avgByCorr(data);
+    figure('Name', 'result');
+    drawAvgDev(avg, dev, shifted);
 end
 
 % find averege signals by maximum correlation
-function avgByCorr(sig)
+function [avg, dev, shifted] = avgByCorr(sig)
     % matrix, containing shifts for each signal to maximaly correlate with
     % every other signal
     toMax = zeros(length(sig));
@@ -70,17 +127,6 @@ function avgByCorr(sig)
     % compute averege and standard devialtion of centered signals
     avg = mean(shifted, 1, 'omitnan');      % mean for every column, ommiting NaN
     dev = std(shifted, 0, 1, 'omitnan');    % standart deviation for each column, ommiting NaN
-    sDev = trapz(dev);
-    
-    hold on;
-    pDev = fill([1:length(avg), length(avg):-1:1], [avg + dev/2, flip(avg - dev/2)], ...
-        'r', 'FaceAlpha', 0.7, 'LineStyle', 'none');
-    pd = plot(shifted', 'g');
-%     ps = plot(shifted(mainRow,:), 'b', 'LineWidth', 1);
-    pa = plot(avg, 'k', 'LineWidth', 1);
-    legend([pd(1), pa, pDev], {'Data', 'Averege', sprintf('Standert Deviation;\nArea = %.2f', sDev)});
-    set(gcf, 'Color', 'w');
-    hold off;
 end
 
 % draw data batc for each set
@@ -95,6 +141,14 @@ function drawSets(sets)
     end
 end
 
+function drawSet(set)
+    hold on;
+    for i = 1:length(set)
+        plot(set{i});
+    end
+    hold off
+end
+
 % make signals min value be at zero, and normalize signals to [0 1]
 function sets = mNormalize(sets)
     for t=1:length(sets)
@@ -104,6 +158,32 @@ function sets = mNormalize(sets)
             sets{t}(i).data = (sets{t}(i).data - lowest) / (highest - lowest); 
         end
     end
+end
+
+% draw average signal and stndart deviation fom it
+function drawAvgDev(avg, dev, shifted)
+    sDev = trapz(dev);
+    hold on;
+    pDev = fill([1:length(avg), length(avg):-1:1], [avg + dev/2, flip(avg - dev/2)], ...
+        'r', 'FaceAlpha', 0.7, 'LineStyle', 'none');
+    pa = plot(avg, 'k', 'LineWidth', 2);
+    pd = plot(shifted', 'g');
+    legend([pd(1), pa, pDev], {'Data', 'Averege', sprintf('Standert Deviation;\nArea = %.2f', sDev)});
+    set(gcf, 'Color', 'w');
+    hold off;
+end
+
+function all = mkAllFlips(set)
+    function all = recFun(set, ind)
+        if (ind <= length(set))
+            set2 = set;
+            set2{ind} = flip(set{ind});
+            all = [recFun(set, ind+1), recFun(set2, ind+1)];
+        else
+            all = {set};
+        end
+    end
+    all = recFun(set, 1);
 end
 
 % compute correlation between two signals
