@@ -1,4 +1,6 @@
 function sets = analiseStat()
+    global ALL_FLIPS_SAMPLES;
+    
     DATA_LEN = 24000; % preset length of a sample signal
     FS = 62.5;
     ALL_FLIPS_SAMPLES = 8;
@@ -30,11 +32,12 @@ function sets = analiseStat()
 end
 
 function findSetAverage(samples)
+    global ALL_FLIPS_SAMPLES;
     % I step of correlating sets
     % because sets can be flipped, we take ALL_FLIPS_SAMPLES random samples, 
     % and calculate all 2^ALL_FLIPS_SAMPLES available combinations of flips
     figure('Name', 'Input Data');
-    drawSet(data);
+    drawSet(samples);
     
     % to be in array bounds
     samples = samples(1:min([length(samples), ALL_FLIPS_SAMPLES]));
