@@ -1,8 +1,8 @@
 function sets = analiseStat()
     global ALL_FLIPS_SAMPLES;
     
-    DATA_LEN = 24000; % preset length of a sample signal
-    FS = 62.5;
+    DATA_LEN = 24000;   % preset length of a sample signal
+    FS = 62.5;          % sample frequency
     ALL_FLIPS_SAMPLES = 8;
     
     % load classified data, which was made by another script
