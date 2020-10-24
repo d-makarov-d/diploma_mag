@@ -6,6 +6,7 @@ function [T, sig, FS] = readSignals(path, r, expr)
 % if r, parses subfolders
 % if a regular expression is specified, reads signals only mathing this
 % expression
+import utils.parseFolder
     switch nargin
         case 1
             r = false;
@@ -79,23 +80,5 @@ function [T, sig, FS] = readSignals(path, r, expr)
         T(shift:shift + lens(ind) - 1) = startSec + data{ind}.T;
         sig(shift:shift + lens(ind) - 1) = data{ind}.sig;
         shift = shift + lens(ind);
-    end
-end
-
-% function, parsing folder, recursively if specified
-function names = parseFolder(path, r, expr)
-    % content of the parsed directory
-    files = dir(path);
-    names = cell.empty;
-    for i = 1:length(files)
-        if (~files(i).isdir)
-            match = regexp([path '\' files(i).name], expr, 'match');
-            if (~isempty(match))
-                names{end+1, 1} = [files(i).folder '\' files(i).name];
-                names{end, 2} = files(i).name;
-            end
-        elseif (r && ~strcmp(files(i).name, '.') && ~strcmp(files(i).name, '..'))
-            names = [names; parseFolder([path '\' files(i).name], r, expr)];
-        end
     end
 end
