@@ -1,35 +1,42 @@
-function [T, sig, FS] = readSignals(path, expr)
-% reads signals from specified folder
+function [T, sig, FS] = readSignals(path, r, expr)
+% path - path to folder
+% r - parse subfolders if true
+% expr - match regexp
+% decodes binary files, containing signals from specified folder
+% if r, parses subfolders
 % if a regular expression is specified, reads signals only mathing this
 % expression
+    switch nargin
+        case 1
+            r = false;
+            expr = '.+\.adb'; % default expression, describing all *.adb files
+        case 2
+            expr = '.+\.adb'; % default expression, describing all *.adb files
+    end
+            
     if (nargin == 1)
         expr = '.+\.adb'; % default expression, describing all *.adb files
     end
     
-    % content of the passed directory
-    files = dir(path);
     % names of parsed files with data
-    names = cell.empty;
-    for i = 1:length(files)
-        if (~files(i).isdir)
-            match = regexp(files(i).name, expr, 'match');
-            if (~isempty(match))
-                names{end+1} = [files(i).folder '\' files(i).name];
-            end
-        end
-    end
+    names = parseFolder(path, r, expr);
     
     if isempty(names)
         warning('No .adb files found');
+        T = []; sig = []; FS = 0;
         return;
     end
     
-    data = cell(1, length(names));
-    fs = zeros(1,length(names));
-    stn = zeros(1,length(names));
-    for i = 1:length(names)
+    Nfiles = size(names, 1);
+    fprintf('found %i files. ...\n', Nfiles);
+    
+    data = cell(1, Nfiles);
+    fs = zeros(1,Nfiles);
+    stn = zeros(1,Nfiles);
+    for i = 1:Nfiles
+        fprintf('decoding %s ... ', names{i, 2});
         %file reading in mkm/sec
-        [y,par] = utils.adb_read(names{i},'s',0);
+        [y,par] = utils.adb_read(names{i, 1},'s',0);
         %time vector, T in seconds
         data{i}.T = (0:length(y)-1)/par.fs;
         %signal
@@ -37,6 +44,7 @@ function [T, sig, FS] = readSignals(path, expr)
         data{i}.start = par.stst;
         fs(i) = par.fs;
         stn(i) = par.stn;
+        fprintf('success\n');
     end
     
     % check, that all sample rates are equal
@@ -71,5 +79,23 @@ function [T, sig, FS] = readSignals(path, expr)
         T(shift:shift + lens(ind) - 1) = startSec + data{ind}.T;
         sig(shift:shift + lens(ind) - 1) = data{ind}.sig;
         shift = shift + lens(ind);
+    end
+end
+
+% function, parsing folder, recursively if specified
+function names = parseFolder(path, r, expr)
+    % content of the parsed directory
+    files = dir(path);
+    names = cell.empty;
+    for i = 1:length(files)
+        if (~files(i).isdir)
+            match = regexp([path '\' files(i).name], expr, 'match');
+            if (~isempty(match))
+                names{end+1, 1} = [files(i).folder '\' files(i).name];
+                names{end, 2} = files(i).name;
+            end
+        elseif (r && ~strcmp(files(i).name, '.') && ~strcmp(files(i).name, '..'))
+            names = [names; parseFolder([path '\' files(i).name], r, expr)];
+        end
     end
 end

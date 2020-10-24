@@ -176,6 +176,7 @@ function drawAvgDev(avg, dev, shifted)
     hold off;
 end
 
+% recursively compute all combinations of flips
 function all = mkAllFlips(set)
     function all = recFun(set, ind)
         if (ind <= length(set))
@@ -188,22 +189,3 @@ function all = mkAllFlips(set)
     end
     all = recFun(set, 1);
 end
-
-% compute correlation between two signals
-% for all superpositions of those dignals
-% function moveCorr(X, Y)
-%     lX = length(X);
-%     lY = length(Y);
-%     len = 2*(lY - 1) + lX;
-%     lag = (-lY + 1):(lX-1);
-%     x = zeros(1, len);
-%     y = zeros(length(lag), len);
-%     c = zeros(1, length(lag));
-%     c1 = zeros(1, length(lag));
-%     
-%     x(lY:lY-1+lX) = X;
-%     for i=1:length(lag)
-%         y(i,i:i-1+lY) = Y;
-%         c(i) = corr(x', y(i,:)', 'Type', 'Pearson');
-%     end
-% end
