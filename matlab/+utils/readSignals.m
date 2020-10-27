@@ -1,4 +1,4 @@
-function [T, sig, FS] = readSignals(path, r, expr)
+function [T, sig, FS, T0] = readSignals(path, r, expr)
 % path - path to folder
 % r - parse subfolders if true
 % expr - match regexp
@@ -81,4 +81,6 @@ import utils.parseFolder
         sig(shift:shift + lens(ind) - 1) = data{ind}.sig;
         shift = shift + lens(ind);
     end
+    
+    T0 = T0*24*60*60;
 end

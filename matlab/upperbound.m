@@ -13,20 +13,18 @@ function [S, T] = upperbound(path, frameLen)
     Tlist = java.util.LinkedList;
     
     % the files must be processed one - by one, not to run out of memory
-    shift = 0;
     for i=1:size(names, 1)
-        [t, sig, ~] = utils.readSignals(names{i});
+        [t, sig, ~, t0] = utils.readSignals(names{i});
         % find maximal values in frames, then store them to output sequence
         nFrames = floor(length(t) / frameLen);
         for f = 1:nFrames
             [m, mI] = max(sig((f-1)*frameLen+1 : (f)*frameLen));
             Slist.listIterator.add(m);
-            Tlist.listIterator.add(shift + t((f-1)*frameLen + mI));
+            Tlist.listIterator.add(t0 + t((f-1)*frameLen + mI));
         end
         [m, mI] = max(sig(nFrames*frameLen : end));
         Slist.listIterator.add(m);
-        Tlist.listIterator.add(shift + t(nFrames*frameLen - 1 + mI));
-        shift = shift + t(end);
+        Tlist.listIterator.add(t0 + t(nFrames*frameLen - 1 + mI));
     end
     % output sequence of maximal signal values
     S = zeros(1, Slist.size); 

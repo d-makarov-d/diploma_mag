@@ -25,10 +25,13 @@ function makeEducationSet(path, r, expr)
     end
     disp(FRAME_T);
     DX = 0;                         % frame shift
+    STEP = 6;                       % step, applied, when moving frame
     OUTER_FRAME_T = 500;            % frame for displaying signal
+    SIG_FRAME = OUTER_FRAME_T * 2; % frame, in which the signal is plotted
+    sigFrameDx = 0;                 % shift for signal frame
     examples = {};                  % container for training examples
     nTrain = 0;                     % quantity of signals with train
-    nNoTrain = 0;                     % quantity of signals without train
+    nNoTrain = 0;                   % quantity of signals without train
     
     % frames for signal and fourier display
     sc_sz = get(0,'ScreenSize');
@@ -49,17 +52,14 @@ function makeEducationSet(path, r, expr)
     fig.WindowKeyPressFcn = @onKeyPressed;
     
     % initial plot of signal and frame
-    plot(sig_axes, T, sig );
-    rect = rectangle(sig_axes, ...
-        'Position', [ DX, sig_axes.YLim(1), FRAME_T, sig_axes.YLim(2)-sig_axes.YLim(1)], ...
-        'FaceColor', [0,1,0,0.2] );
+    rect = sigReplot(true);
     replot();
     
     % show signal, fourier and the prame on axes
     function replot()
         sig_axes.YLim = [-65 65];
         rect.Position = [ DX, sig_axes.YLim(1), FRAME_T, sig_axes.YLim(2)-sig_axes.YLim(1)];
-        sig_axes.XLim = [DX - floor(OUTER_FRAME_T/2), DX + ceil(OUTER_FRAME_T/2)];
+        sig_axes.XLim = [DX - floor(OUTER_FRAME_T/2), DX + FRAME_T + ceil(OUTER_FRAME_T/2)];
 
         fourier = fft( sig(frame) );
         plot(fourier_axes, ...
@@ -67,6 +67,8 @@ function makeEducationSet(path, r, expr)
             abs( fourier( 1:floor(length(fourier)/2) + 1) ), ...
             'LineWidth', 1);
         fourier_axes.YLim = [0 10000];
+        
+        sigReplot(false);
 
         xlabel(sig_axes, 'Time (sec)');
         ylabel(sig_axes, 'Acceleration (mkm/sec)');
@@ -86,9 +88,9 @@ function makeEducationSet(path, r, expr)
     function onKeyPressed(~, event)
         switch event.Key
             case 'rightarrow'
-                DX = DX + 3;
+                DX = DX + STEP;
             case 'leftarrow'
-                DX = DX - 3;
+                DX = DX - STEP;
             case '1'
                 examples{end+1} = {sig(frame), 1}; %signal
                 nTrain = nTrain + 1;
@@ -112,6 +114,26 @@ function makeEducationSet(path, r, expr)
 %                 fclose(fileID);
         end
         replot();
+    end
+
+    % plot part of a signal, part should be big enought not to replot
+    % sig very often, but small enought to faastly move it
+    function R = sigReplot(force)
+        rBoundSigFrame = sigFrameDx + SIG_FRAME;
+        rBoundFrame = DX + FRAME_T + ceil(OUTER_FRAME_T/2);
+        % check, if replot is needed
+        if ((rBoundFrame + STEP >= rBoundSigFrame) || force)
+            sigFrameDx = DX - floor(OUTER_FRAME_T/2) - STEP;
+            mask = T >= sigFrameDx & T <= sigFrameDx + SIG_FRAME;
+            cla(sig_axes);
+            hold(sig_axes, 'on');
+            plot(sig_axes, T(mask), sig(mask));
+            rect = rectangle(sig_axes, ...
+                'Position', [ DX, sig_axes.YLim(1), FRAME_T, sig_axes.YLim(2)-sig_axes.YLim(1)], ...
+                'FaceColor', [0,1,0,0.2] );
+            R = rect;
+            hold(sig_axes, 'off');
+        end
     end
 
     function log(str)
