@@ -99,19 +99,65 @@ function makeEducationSet(path, r, expr)
                 examples{end+1} = {sig(frame), 0}; %no signal
                 nNoTrain = nNoTrain + 1;
                 log(sprintf('train: %d, no train: %d (added)', nTrain, nNoTrain));
-%             case 's'
-%                 save('patterns/sig2_part_2_pattern.mat', 'pattern');
-%                 fileID = fopen('patterns/train2_part_2.csv', 'w');
-%                 format_spec = '%f';
-%                 for i = 1:(DOT_LENGTH-1)
-%                     format_spec = strcat(format_spec, ' %f');
-%                 end
-%                 format_spec = strcat(format_spec, ' %i\n');
-%                 fprintf(fileID, '%i %i\n', [DOT_LENGTH, length(pattern)]);
-%                 for i = 1:length(pattern)
-%                     fprintf(fileID, format_spec, pattern{i});
-%                 end
-%                 fclose(fileID);
+            case 's'
+                [file, fPath] = uiputfile('*.smp', 'save samples');
+                if ~isequal(file, 0)
+                    fullPath = [fPath '\' file];
+                    if exist(fullPath, 'file') == 2
+                        % if file exists, ask user to append or rewrite
+                        fid = fopen(fullPath, 'r');
+                        firstLine = fgetl(fid);
+                        fclose(fid);
+                        if ~isempty(regexp(firstLine, '^[0-9.]+\[\d+\]$', 'match'))
+                            prevData = char(split(firstLine, '['));
+                            prevFrL = prevData(1,1:end-3);
+                            prevDotL = prevData(2,1:end-6);
+                            answer = questdlg(sprintf(['file alredy exists.\n', ...
+                                        'Frame duration %s, current %f\n', ...
+                                        'Frame length %s, current %d\n', ...
+                                        'Append data to it?'],...
+                                    prevFrL, FRAME_T, prevDotL, floor(FRAME_T * FS)), ...
+                                'File exists', ...
+                                'Append', 'Override', 'Cancel', 'Append');
+                            switch answer
+                                case 'Append'
+                                    action = 'a';
+                                case 'Override'
+                                    action = 'w';
+                                otherwise
+                                    action = [];
+                            end
+                        else
+                            answer = questdlg('file alredy exists, and it does not contain any education examples. Override it?', ...
+                                'File exists', ...
+                                'Yes', 'Cancel', 'Cancel');
+                            switch answer
+                                case 'Yes'
+                                    action = 'w';
+                                otherwise
+                                    action = [];
+                            end
+                        end
+                    else
+                        action = 'w';
+                    end
+                    if ~isempty(action)
+                        switch action
+                            case 'a'
+                                fileID = fopen(fullPath, 'a');
+                            case 'w'
+                                fileID = fopen(fullPath, 'w');
+                                len = floor(FRAME_T * FS);
+                                fprintf(fileID, '%f[%d]\n', FRAME_T, len);
+                        end
+                        for i=1:length(examples)
+                            segment = sprintf('%f,', examples{i}{1});
+                            segment(end) = [];
+                            fprintf(fileID, '%d : %s\n', examples{i}{2}, segment);
+                        end
+                        fclose(fileID);
+                    end
+                end
         end
         replot();
     end
