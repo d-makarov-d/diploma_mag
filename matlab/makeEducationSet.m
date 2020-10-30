@@ -91,6 +91,8 @@ function makeEducationSet(path, r, expr)
                 DX = DX + STEP;
             case 'leftarrow'
                 DX = DX - STEP;
+            case 'd'
+                DX = DX + STEP*10;
             case '1'
                 examples{end+1} = {sig(frame), 1}; %signal
                 nTrain = nTrain + 1;
@@ -100,63 +102,12 @@ function makeEducationSet(path, r, expr)
                 nNoTrain = nNoTrain + 1;
                 log(sprintf('train: %d, no train: %d (added)', nTrain, nNoTrain));
             case 's'
-                [file, fPath] = uiputfile('*.smp', 'save samples');
-                if ~isequal(file, 0)
-                    fullPath = [fPath '\' file];
-                    if exist(fullPath, 'file') == 2
-                        % if file exists, ask user to append or rewrite
-                        fid = fopen(fullPath, 'r');
-                        firstLine = fgetl(fid);
-                        fclose(fid);
-                        if ~isempty(regexp(firstLine, '^[0-9.]+\[\d+\]$', 'match'))
-                            prevData = char(split(firstLine, '['));
-                            prevFrL = prevData(1,1:end-3);
-                            prevDotL = prevData(2,1:end-6);
-                            answer = questdlg(sprintf(['file alredy exists.\n', ...
-                                        'Frame duration %s, current %f\n', ...
-                                        'Frame length %s, current %d\n', ...
-                                        'Append data to it?'],...
-                                    prevFrL, FRAME_T, prevDotL, floor(FRAME_T * FS)), ...
-                                'File exists', ...
-                                'Append', 'Override', 'Cancel', 'Append');
-                            switch answer
-                                case 'Append'
-                                    action = 'a';
-                                case 'Override'
-                                    action = 'w';
-                                otherwise
-                                    action = [];
-                            end
-                        else
-                            answer = questdlg('file alredy exists, and it does not contain any education examples. Override it?', ...
-                                'File exists', ...
-                                'Yes', 'Cancel', 'Cancel');
-                            switch answer
-                                case 'Yes'
-                                    action = 'w';
-                                otherwise
-                                    action = [];
-                            end
-                        end
-                    else
-                        action = 'w';
-                    end
-                    if ~isempty(action)
-                        switch action
-                            case 'a'
-                                fileID = fopen(fullPath, 'a');
-                            case 'w'
-                                fileID = fopen(fullPath, 'w');
-                                len = floor(FRAME_T * FS);
-                                fprintf(fileID, '%f[%d]\n', FRAME_T, len);
-                        end
-                        for i=1:length(examples)
-                            segment = sprintf('%f,', examples{i}{1});
-                            segment(end) = [];
-                            fprintf(fileID, '%d : %s\n', examples{i}{2}, segment);
-                        end
-                        fclose(fileID);
-                    end
+                saveAll();
+            case 'j'        % jump
+                answer = inputdlg({'Fump to (seconds):'}, 'Fump');
+                targ = str2double(answer{1});
+                if ~isnan(targ)
+                    DX = targ;
                 end
         end
         replot();
@@ -185,6 +136,67 @@ function makeEducationSet(path, r, expr)
     function log(str)
         log_box.String{end+1} = str;
         log_box.Value = length(log_box.String);
+    end
+
+    function saveAll()
+        [file, fPath] = uiputfile('*.smp', 'save samples');
+        if ~isequal(file, 0)
+            fullPath = [fPath '\' file];
+            if exist(fullPath, 'file') == 2
+                % if file exists, ask user to append or rewrite
+                fid = fopen(fullPath, 'r');
+                firstLine = fgetl(fid);
+                fclose(fid);
+                if ~isempty(regexp(firstLine, '^[0-9.]+\[\d+\]$', 'match'))
+                    prevData = char(split(firstLine, '['));
+                    prevFrL = prevData(1,1:end-3);
+                    prevDotL = prevData(2,1:end-6);
+                    answer = questdlg(sprintf(['file alredy exists.\n', ...
+                                'Frame duration %s, current %f\n', ...
+                                'Frame length %s, current %d\n', ...
+                                'Append data to it?'],...
+                            prevFrL, FRAME_T, prevDotL, floor(FRAME_T * FS)), ...
+                        'File exists', ...
+                        'Append', 'Override', 'Cancel', 'Append');
+                    switch answer
+                        case 'Append'
+                            action = 'a';
+                        case 'Override'
+                            action = 'w';
+                        otherwise
+                            action = [];
+                    end
+                else
+                    answer = questdlg('file alredy exists, and it does not contain any education examples. Override it?', ...
+                        'File exists', ...
+                        'Yes', 'Cancel', 'Cancel');
+                    switch answer
+                        case 'Yes'
+                            action = 'w';
+                        otherwise
+                            action = [];
+                    end
+                end
+            else
+                action = 'w';
+            end
+            if ~isempty(action)
+                switch action
+                    case 'a'
+                        fileID = fopen(fullPath, 'a');
+                    case 'w'
+                        fileID = fopen(fullPath, 'w');
+                        len = floor(FRAME_T * FS);
+                        fprintf(fileID, '%f[%d]\n', FRAME_T, len);
+                end
+                for i=1:length(examples)
+                    segment = sprintf('%f,', examples{i}{1});
+                    segment(end) = [];
+                    fprintf(fileID, '%d : %s\n', examples{i}{2}, segment);
+                end
+                fclose(fileID);
+            end
+        end
     end
 end
 

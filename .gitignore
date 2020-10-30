@@ -1,1 +1,3 @@
 *.db
+python/tensorflow_venv/*
+*.pyc
