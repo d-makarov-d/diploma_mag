@@ -1,3 +1,4 @@
 *.db
 python/tensorflow_venv/*
 *.pyc
+python/.idea/*
