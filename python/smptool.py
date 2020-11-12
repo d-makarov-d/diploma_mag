@@ -29,8 +29,9 @@ def parse_smp_line(line):
     features = tf.strings.substr(line, 4, ln_len - 4)
     features = tf.strings.split(features, ",")
     features = tf.strings.to_number(features, out_type=tf.float64)
+    features = features / tf.reduce_max(features)           # norm to 1
     # should be exactly this order (inputs, targets) for tf.keras.fit()
-    return tf.tuple([features, label])
+    return [features, label]
 
 
 def get_files_list(options):
@@ -39,6 +40,10 @@ def get_files_list(options):
 
     Args:
         options: user - specified options
+    Returns:
+        valid_sets (List[str]): list of files with validated sets of examples
+        test_set (str): path to file with test set
+        fs (float): sampling frequency of all signals
 
     """
 
@@ -54,11 +59,13 @@ def get_files_list(options):
         parameters intrgrity
 
         Args:
-            path (str): path to .smp file with examples for trining
+            path (str): path to .smp file with examples for training
+        Returns:
+            valid_sets (Dict[str, Any]): info about examples in file
 
         Raises:
-            FrameException: If frame integrity for set is broken (frames should have
-            same length in points and time for proper training)
+            FrameException: If frame integrity for set is broken (frames should
+                have same length in points and time for proper training)
             FormatException: If format of some row is incorrect
 
         """
@@ -106,8 +113,7 @@ def get_files_list(options):
                 else:
                     raise FormatException("incorrect format")
             print("success (t: %d, n: %d)" % (trains, noises))
-            valid_sets.append(
-                {"path": path, "trains": trains, "noises": noises})
+        return {"path": path, "trains": trains, "noises": noises}
 
     def parse_folder(path):
         """parse specified folder for .smp files
@@ -116,23 +122,31 @@ def get_files_list(options):
             path (str): path to a folder to parse
 
         """
-        setPat = re.compile(r"^.+\.smp$")
+        set_pat = re.compile(r"^.+\.smp$")
         for file in os.listdir(path):
-            if setPat.match(file):
-                validate_set("%s/%s" % (path, file))
+            if set_pat.match(file):
+                candidate = validate_set("%s/%s" % (path, file))
+                if candidate: valid_sets.append(candidate)
 
     # exit if nothing to parse for training examples
-    if not options.folder and not options.sets:
+    if not options.folder and not options.set:
         print("no files or folder specified")
         exit(0)
 
     if options.folder:
         parse_folder(options.folder)
 
-    if options.sets:
-        for s in options.sets:
-            validate_set(s)
-    return valid_sets
+    if options.set:
+        for s in options.set:
+            candidate = validate_set(s)
+            if candidate: valid_sets.append(candidate)
+
+    test_set = None
+    if options.test:
+        test_set = validate_set(options.test)
+
+    fs = frame_length / frame_duration      # sampling frequency
+    return valid_sets, test_set, fs
 
 
 def disp_examples_info(sets):
@@ -162,11 +176,13 @@ def get_dataset(options):
     on list of files, parsed according to user parameters
 
     Returns:
-        acc (tf.Dataset): data set, accumulating data from all files
+        acc, test_set (tf.Dataset, tf.Dataset): dataset, accumulating data from
+            all files, and test dataset
+        fs (float): sampling frequency of all signals
     """
 
     # parse files
-    sets = get_files_list(options)
+    sets, test, fs = get_files_list(options)
     # ask to proceed
     disp_examples_info(sets)
 
@@ -184,9 +200,18 @@ def get_dataset(options):
         else:
             acc = dataset
     acc = acc.shuffle(n_examples)  # if n_examples is not too big!!!
+    if not test:
+        # if no test dataset provided, take examples from main dataset
+        print("No test dataset found, taking test examples from main dateset")
+        test_set = acc.take(10)
+    else:
+        # make test dataset from file
+        test_set = tf.data.TextLineDataset(test["path"])
+        test_set = test_set.skip(1)     # skip first, header, line
+        test_set = test_set.map(parse_smp_line)
+        test_set.shuffle(test["trains"] + test["noises"])
     acc = acc.batch(32)
-    # for big datasets  may be shuffle with smaller buffer size
-    return acc
+    return acc, test_set, fs
 
 
 class FrameException(Exception):
