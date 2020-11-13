@@ -96,7 +96,7 @@ function makeEducationSet(path, r, expr)
             case '1'
                 examples{end+1} = {sig(frame), 1}; %signal
                 nTrain = nTrain + 1;
-                log(sprintf('train: %d (added), no train: %d)', nTrain, nNoTrain));
+                log(sprintf('train: %d (added), no train: %d', nTrain, nNoTrain));
             case '0'
                 examples{end+1} = {sig(frame), 0}; %no signal
                 nNoTrain = nNoTrain + 1;
@@ -180,16 +180,19 @@ function makeEducationSet(path, r, expr)
             else
                 action = 'w';
             end
+            len = floor(FRAME_T * FS);
             if ~isempty(action)
                 switch action
                     case 'a'
                         fileID = fopen(fullPath, 'a');
                     case 'w'
                         fileID = fopen(fullPath, 'w');
-                        len = floor(FRAME_T * FS);
                         fprintf(fileID, '%f[%d]\n', FRAME_T, len);
                 end
                 for i=1:length(examples)
+                    if length(examples{i}{1}) > len 
+                        examples{i}{1}(end) = [];
+                    end
                     segment = sprintf('%f,', examples{i}{1});
                     segment(end) = [];
                     fprintf(fileID, '%d : %s\n', examples{i}{2}, segment);

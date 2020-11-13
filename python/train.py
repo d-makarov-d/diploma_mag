@@ -133,8 +133,8 @@ def main():
         untrained_predicted_labels = model_obj(samples).numpy()
         # train model
         history = model_obj.fit(x=dataset, epochs=epochs)
-        train_filtered = model_obj.filter(train_sample)
-        no_train_filtered = model_obj.filter(no_train_sample)
+        train_filtered = model_obj.filter_single(train_sample)
+        no_train_filtered = model_obj.filter_single(no_train_sample)
         predicted_labels = model_obj(samples).numpy()
 
         # result visualization and saving
@@ -198,10 +198,15 @@ def main():
         label_trained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         fig.tight_layout(w_pad=3, h_pad=2,
                          rect=[0.0225, 0.0225, 0.95, 0.95])
-        plt.savefig(fname)
+        #plt.savefig(fname)
+        plt.show()
 
-    eval_all("training_res")
-
+    #eval_all("training_res")
+    eval_optimizer("training_res",
+                   models.NeuralModel,
+                   tf.keras.optimizers.Adamax(learning_rate=0.0005),
+                   15,
+                   True)
 
 if __name__ == '__main__':
     main()

@@ -2,3 +2,4 @@
 python/tensorflow_venv/*
 *.pyc
 python/.idea/*
+python/eager_test.py
