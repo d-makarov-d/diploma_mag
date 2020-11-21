@@ -101,6 +101,15 @@ function makeEducationSet(path, r, expr)
                 examples{end+1} = {sig(frame), 0}; %no signal
                 nNoTrain = nNoTrain + 1;
                 log(sprintf('train: %d, no train: %d (added)', nTrain, nNoTrain));
+            case 'r'
+                if (examples{end}{2} > 0)
+                    nTrain = nTrain - 1;
+                    log(sprintf('train: %d (removed), no train: %d', nTrain, nNoTrain));
+                else
+                    nNoTrain = nNoTrain - 1;
+                    log(sprintf('train: %d, no train: %d (removed)', nTrain, nNoTrain));
+                end
+                examples = examples(1:end-1);
             case 's'
                 saveAll();
             case 'j'        % jump

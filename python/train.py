@@ -80,6 +80,31 @@ def main():
                                n_epochs,
                                rndmz)
 
+    def eval_complecated(folder):
+        optimizers = [
+            tf.keras.optimizers.Adadelta,
+            tf.keras.optimizers.Adagrad,
+            tf.keras.optimizers.Adam,
+            tf.keras.optimizers.Adamax,
+            tf.keras.optimizers.Ftrl,
+            tf.keras.optimizers.Nadam,
+            tf.keras.optimizers.RMSprop,
+            tf.keras.optimizers.SGD,
+        ]
+
+        type_eph_lrate = [
+            (models.Deep2Hidden, 15, 0.00003),
+            (models.Deep11Hidden, 15, 0.00003)
+        ]
+
+        for opt in optimizers:
+            for model, epochs, lrate in type_eph_lrate:
+                eval_optimizer(folder,
+                               model,
+                               opt(learning_rate=lrate),
+                               epochs,
+                               True)
+
     def eval_optimizer(folder,
                        model, optimizer, epochs, randomize):
         """Evaluates given model on given dataset
@@ -99,19 +124,25 @@ def main():
         class2name = {
             models.DefaultModel: "default",
             models.BiasedModel: "biased",
-            models.NeuralModel: "neural"
+            models.NeuralModel: "neural",
+            models.NeuralSTD: "neuralSTD",
+            models.Deep1Hidden: "deep1h",
+            models.Deep2Hidden: "deep2h",
+            models.Deep11Hidden: "deep1_1"
         }
 
         # prepare for training
         layer_len = len(dataset.take(1).as_numpy_iterator().next()[0][0])
         optimizer_conf = optimizer.get_config()
-        fname = "%s/%s_%s_%deph_%.3flrate_%s.png" % \
-                (folder,
-                 class2name[model],
+        fname = "/%s_%s_%deph_%.5flrate_%s" % \
+                (class2name[model],
                  optimizer_conf["name"],
                  epochs,
                  optimizer_conf["learning_rate"],
                  "rnd" if randomize else "nornd")
+
+        pic_name = folder + fname + ".png"
+        file_name = folder + "/models" + fname + ".model"
         model_obj = model(layer_len, randomize)
         model_obj.compile(optimizer=optimizer, loss=models.SimpleLoss())
 
@@ -151,7 +182,7 @@ def main():
         sig_trained_ax.set_title("отфильтрованные сигналы")
         sig_trained_ax.set_xlabel("время, сек")
         sig_trained_ax.set_ylabel("ускорение, мкм/сек")
-        sig_trained_ax.set_ylim(-1,1)
+        # sig_trained_ax.set_ylim(-1, 1)
         label_untrained_ax = fig.add_subplot(3, 2, 5)
         label_untrained_ax.set_title("классификация необученной моделью")
         label_untrained_ax.set_xlabel("вероятность, что сигнал от поезда")
@@ -170,12 +201,12 @@ def main():
             "r", label="сигнал без поезда")
         sig_untrained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         train_ax_label, = sig_trained_ax.plot(
-            np.linspace(0, len(train_filtered)/fs, len(train_filtered)),
-            train_filtered,
+            np.linspace(0, len(train_filtered)/fs, len(train_filtered)-1),
+            train_filtered[1:],
             "g", label="сигнал с поездом")
         no_train_ax_label, = sig_trained_ax.plot(
-            np.linspace(0, len(no_train_filtered)/fs, len(no_train_filtered)),
-            no_train_filtered,
+            np.linspace(0, len(no_train_filtered)/fs, len(no_train_filtered)-1),
+            no_train_filtered[1:],
             "r", label="сигнал без поезда")
         sig_trained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         train_ax_label = label_untrained_ax.scatter(
@@ -198,15 +229,22 @@ def main():
         label_trained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         fig.tight_layout(w_pad=3, h_pad=2,
                          rect=[0.0225, 0.0225, 0.95, 0.95])
-        #plt.savefig(fname)
-        plt.show()
+        plt.savefig(pic_name)
+        #with open(file_name, "w") as f:
+            #f.write(str(model_obj))
 
-    #eval_all("training_res")
     eval_optimizer("training_res",
-                   models.NeuralModel,
-                   tf.keras.optimizers.Adamax(learning_rate=0.0005),
+                   models.Deep2Hidden,
+                   tf.keras.optimizers.Adamax(learning_rate=0.00003),
                    15,
                    True)
+    eval_optimizer("training_res",
+                   models.Deep11Hidden,
+                   tf.keras.optimizers.Adamax(learning_rate=0.00003),
+                   15,
+                   True)
+
+
 
 if __name__ == '__main__':
     main()
