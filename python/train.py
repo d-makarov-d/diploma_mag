@@ -177,11 +177,11 @@ def main():
         sig_untrained_ax = fig.add_subplot(3, 2, 3)
         sig_untrained_ax.set_title("примеры сигналов")
         sig_untrained_ax.set_xlabel("время, сек")
-        sig_untrained_ax.set_ylabel("ускорение, мкм/сек")
+        sig_untrained_ax.set_ylabel("ускорение, мкм/сек^2")
         sig_trained_ax = fig.add_subplot(3, 2, 4)
         sig_trained_ax.set_title("отфильтрованные сигналы")
         sig_trained_ax.set_xlabel("время, сек")
-        sig_trained_ax.set_ylabel("ускорение, мкм/сек")
+        sig_trained_ax.set_ylabel("ускорение, мкм/сек^2")
         # sig_trained_ax.set_ylim(-1, 1)
         label_untrained_ax = fig.add_subplot(3, 2, 5)
         label_untrained_ax.set_title("классификация необученной моделью")
@@ -229,21 +229,16 @@ def main():
         label_trained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         fig.tight_layout(w_pad=3, h_pad=2,
                          rect=[0.0225, 0.0225, 0.95, 0.95])
-        plt.savefig(pic_name)
+        plt.show()
+        #plt.savefig(pic_name)
         #with open(file_name, "w") as f:
             #f.write(str(model_obj))
 
     eval_optimizer("training_res",
-                   models.Deep2Hidden,
+                   models.Deep1Hidden,
                    tf.keras.optimizers.Adamax(learning_rate=0.00003),
                    15,
                    True)
-    eval_optimizer("training_res",
-                   models.Deep11Hidden,
-                   tf.keras.optimizers.Adamax(learning_rate=0.00003),
-                   15,
-                   True)
-
 
 
 if __name__ == '__main__':
