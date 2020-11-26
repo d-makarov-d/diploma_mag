@@ -80,7 +80,7 @@ def main():
                                n_epochs,
                                rndmz)
 
-    def eval_complecated(folder):
+    def eval_complicated(folder):
         optimizers = [
             tf.keras.optimizers.Adadelta,
             tf.keras.optimizers.Adagrad,
@@ -105,6 +105,41 @@ def main():
                                epochs,
                                True)
 
+    def eval_big(folder):
+        optimizers_filter = [
+            (tf.keras.optimizers.Adadelta(learning_rate=1e-3), 200),
+            (tf.keras.optimizers.Adagrad(learning_rate=1e-3), 200),
+            (tf.keras.optimizers.SGD(learning_rate=1e-3), 200)
+        ]
+        optimizers_layer = [
+            (tf.keras.optimizers.Adam(learning_rate=1e-5), 30),
+            (tf.keras.optimizers.Adamax(learning_rate=1e-5), 30),
+            (tf.keras.optimizers.Ftrl(learning_rate=1e-5), 30),
+            (tf.keras.optimizers.Nadam(learning_rate=1e-5), 30),
+            (tf.keras.optimizers.RMSprop(learning_rate=1e-5), 30)
+        ]
+        optimizers_deep = [
+            (tf.keras.optimizers.Adam(learning_rate=3e-6), 15),
+            (tf.keras.optimizers.Adamax(learning_rate=3e-6), 15),
+            (tf.keras.optimizers.RMSprop(learning_rate=3e-6), 15)
+        ]
+        mdls = [
+            models.DefaultModel,
+            models.NeuralModel,
+            models.Deep1Hidden
+        ]
+
+        for (opt, model) in zip((optimizers_filter,
+                                 optimizers_layer,
+                                 optimizers_deep), mdls):
+            for (optimizer, epochs) in opt:
+                randomize = False if model is models.DefaultModel else True
+                eval_optimizer(folder,
+                               model,
+                               optimizer,
+                               epochs,
+                               randomize)
+
     def eval_optimizer(folder,
                        model, optimizer, epochs, randomize):
         """Evaluates given model on given dataset
@@ -118,7 +153,6 @@ def main():
             optimizer: tf.keras optimizer
             epochs (int): epochs of training
             randomize (bool): tandomize initial weights and biases
-
 
         """
         class2name = {
@@ -229,16 +263,10 @@ def main():
         label_trained_ax.legend(handles=[train_ax_label, no_train_ax_label])
         fig.tight_layout(w_pad=3, h_pad=2,
                          rect=[0.0225, 0.0225, 0.95, 0.95])
-        plt.show()
-        #plt.savefig(pic_name)
-        #with open(file_name, "w") as f:
-            #f.write(str(model_obj))
-
-    eval_optimizer("training_res",
-                   models.Deep1Hidden,
-                   tf.keras.optimizers.Adamax(learning_rate=0.00003),
-                   15,
-                   True)
+        #plt.show()
+        plt.savefig(pic_name)
+        with open(file_name, "w") as f:
+            f.write(str(model_obj))
 
 
 if __name__ == '__main__':
