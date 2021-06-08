@@ -81,6 +81,4 @@ import utils.parseFolder
         sig(shift:shift + lens(ind) - 1) = data{ind}.sig;
         shift = shift + lens(ind);
     end
-    
-    T0 = T0*24*60*60;
 end

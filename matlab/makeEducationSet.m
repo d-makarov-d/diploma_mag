@@ -1,4 +1,5 @@
 function makeEducationSet(path, r, expr)
+% Utility to make education sets from seismic data
 % path - path to folder
 % r - parse subfolders if true
 % expr - match regexp

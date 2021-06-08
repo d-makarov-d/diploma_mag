@@ -1,12 +1,13 @@
-function sets = analiseStat()
-    global ALL_FLIPS_SAMPLES;
+function [avg, dev] = analiseStat(intervals)
+% Averages given set of signals
+% intervals - signal intervals, combined by type
+% avg - averaged curve
+% dev - averagin deviations
+    global ALL_FLIPS_SAMPLES FS;
     
     DATA_LEN = 24000;   % preset length of a sample signal
     FS = 62.5;          % sample frequency
     ALL_FLIPS_SAMPLES = 8;
-    
-    % load classified data, which was made by another script
-    load('patterns\classified.mat');
     
     % sort intervals by their type and write them to sets
     % sets is a cell vector, containing stucts with fields:
@@ -28,19 +29,20 @@ function sets = analiseStat()
     % normalize all data
     sets = mNormalize(sets);
     
-    findSetAverage({sets{2}.data});
+    [avg, dev, ~] = findSetAverage({sets{2}.data});
 end
 
-function findSetAverage(samples)
+function [avg, dev, shifted] = findSetAverage(data)
     global ALL_FLIPS_SAMPLES;
     % I step of correlating sets
     % because sets can be flipped, we take ALL_FLIPS_SAMPLES random samples, 
     % and calculate all 2^ALL_FLIPS_SAMPLES available combinations of flips
-    figure('Name', 'Input Data');
-    drawSet(samples);
+    
+%     figure('Name', 'Input Data');
+%     drawSet(samples);
     
     % to be in array bounds
-    samples = samples(1:min([length(samples), ALL_FLIPS_SAMPLES]));
+    samples = data(1:min([length(data), ALL_FLIPS_SAMPLES]));
     allFlips = mkAllFlips(samples);
     
     % calculate averege and std for all sample combinations
@@ -74,9 +76,9 @@ function findSetAverage(samples)
             crrS = max(xcorr(bestAvg, straight));
             crrF = max(xcorr(bestAvg, flipped));
             
-            if (crrF > crrS)
-                data{i} = flipped;
-            end
+%             if (crrF > crrS)
+%                 data{i} = flipped;
+%             end
         end
     end
     figure('Name', 'Flipped Data');
@@ -109,7 +111,7 @@ function [avg, dev, shifted] = avgByCorr(sig)
     rightBound = 0;
 %     mainRow = 9;
 %     shift = toMax(mainRow,:);
-    corrMax = corrMax / max(corrMax(:));    %normalize corrMax to 1
+    corrMax = corrMax / max(corrMax(:));    % normalize corrMax to 1
     corrMax = corrMax ./ sum(corrMax, 2);   % make sum of each row be 1
     shift = round(sum(-toMax .* corrMax, 2)');
     for i=1:length(sig)
@@ -145,11 +147,18 @@ function drawSets(sets)
 end
 
 function drawSet(set)
+    global FS;
     hold on;
     for i = 1:length(set)
-        plot(set{i});
+        drawSig(set{i}, FS);
     end
     hold off
+end
+
+function drawSig(sig, fs)
+    t = linspace(0, length(sig) / fs, length(sig));
+    plot(t, sig);
+    xlabel('Time, sec');
 end
 
 % make signals min value be at zero, and normalize signals to [0 1]
@@ -167,10 +176,11 @@ end
 function drawAvgDev(avg, dev, shifted)
     sDev = trapz(dev);
     hold on;
-    pDev = fill([1:length(avg), length(avg):-1:1], [avg + dev/2, flip(avg - dev/2)], ...
+    t = (1:length(avg)) ./ 62.5;
+    pd = plot(t, shifted', 'g');
+    pDev = fill([1:length(avg), length(avg):-1:1] ./ 62.5, [avg + dev/2, flip(avg - dev/2)], ...
         'r', 'FaceAlpha', 0.7, 'LineStyle', 'none');
-    pa = plot(avg, 'k', 'LineWidth', 2);
-    pd = plot(shifted', 'g');
+    pa = plot(t, avg, 'k', 'LineWidth', 2);
     legend([pd(1), pa, pDev], {'Data', 'Averege', sprintf('Standert Deviation;\nArea = %.2f', sDev)});
     set(gcf, 'Color', 'w');
     hold off;

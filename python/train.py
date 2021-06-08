@@ -15,6 +15,7 @@ tf.config.set_visible_devices([], 'GPU')
 
 from smptool import get_dataset
 import models
+import os
 
 
 def get_options():
@@ -267,6 +268,18 @@ def main():
         plt.savefig(pic_name)
         with open(file_name, "w") as f:
             f.write(str(model_obj))
+
+    for i in range(0, 20):
+        path = "tmp/%i" % i
+        if not os.path.exists("%s/models" % path):
+            os.makedirs("%s/models" % path)
+        eval_optimizer(
+            path,
+            models.DefaultModel,
+            tf.keras.optimizers.Adagrad(learning_rate=0.001),
+            150,
+            False,
+        )
 
 
 if __name__ == '__main__':
